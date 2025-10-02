@@ -2,6 +2,33 @@
 
 set -e
 
+if [[ "$1" == "-h" || "$1" == "--help" ]]; then
+  echo "Usage: $0 [-threads NUMBER] [-debug]"
+  echo "  -threads NUMBER  Set number of threads for the application (default: 50)"
+  echo "  -debug           Enable debug mode"
+  exit 0
+fi
+
+THREADS=""
+DEBUG=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    -threads)
+      THREADS="$2"
+      shift 2
+      ;;
+    -debug)
+      DEBUG="true"
+      shift
+      ;;
+    *)
+      echo "Unknown option $1"
+      exit 1
+      ;;
+  esac
+done
+
 echo "Checking and installing Go quality tools if needed..."
 if ! command -v staticcheck &> /dev/null; then
   echo "Installing staticcheck..."
@@ -28,4 +55,13 @@ golangci-lint run
 echo "Building and running..."
 mkdir -p ./bin
 env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin . 
-./bin/lock-tester.exe -threads 200
+
+ARGS=""
+if [[ -n "$THREADS" ]]; then
+  ARGS="$ARGS -threads $THREADS"
+fi
+if [[ "$DEBUG" == "true" ]]; then
+  ARGS="$ARGS -debug"
+fi
+
+./bin/lock-tester.exe $ARGS
