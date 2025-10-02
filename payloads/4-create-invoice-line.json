@@ -1,0 +1,19 @@
+{
+  "invoiceId": "d574ff0d-ac08-47ac-948c-7365060c285b",
+  "invoiceLineStatus": "Open",
+  "fundDistributions": [
+    {
+      "distributionType": "percentage",
+      "value": 100,
+      "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "code": "AFRICAHIST",
+      "encumbrance": null,
+      "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2"
+    }
+  ],
+  "releaseEncumbrance": false,
+  "description": "1",
+  "subTotal": 10,
+  "quantity": "1",
+  "id": "e3608c0b-209a-466e-b3b7-bf4afffb11a8"
+}

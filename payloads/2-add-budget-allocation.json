@@ -1,0 +1,13 @@
+{
+  "transactionsToCreate": [
+    {
+      "toFundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+      "amount": "10000",
+      "id": "c3c59e52-d243-4414-b441-5bcf3c935a48",
+      "transactionType": "Allocation",
+      "fiscalYearId": "43aba0df-70e4-435e-8463-d8f730d19e0b",
+      "currency": "USD",
+      "source": "User"
+    }
+  ]
+}

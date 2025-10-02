@@ -1,0 +1,16 @@
+{
+  "chkSubscriptionOverlap": true,
+  "currency": "USD",
+  "source": "User",
+  "adjustments": [],
+  "batchGroupId": "cd592659-77aa-4eb3-ac34-c9a4657bb20f",
+  "status": "Open",
+  "exportToAccounting": true,
+  "vendorId": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "invoiceDate": "2025-10-02",
+  "vendorInvoiceNo": "1",
+  "accountingCode": "G64758-74834",
+  "paymentMethod": "Credit Card",
+  "accountNo": null,
+  "id": "d574ff0d-ac08-47ac-948c-7365060c285b"
+}

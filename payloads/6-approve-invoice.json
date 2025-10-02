@@ -1,0 +1,30 @@
+{
+  "id": "a39311af-4846-41b2-9015-383903bbe75e",
+  "accountingCode": "G64758-74834",
+  "adjustments": [],
+  "adjustmentsTotal": 0,
+  "batchGroupId": "cd592659-77aa-4eb3-ac34-c9a4657bb20f",
+  "chkSubscriptionOverlap": true,
+  "currency": "USD",
+  "enclosureNeeded": false,
+  "exportToAccounting": true,
+  "folioInvoiceNo": "10010",
+  "invoiceDate": "2025-10-02T00:00:00.000+00:00",
+  "paymentMethod": "Credit Card",
+  "status": "Approved",
+  "source": "User",
+  "subTotal": 10,
+  "total": 10,
+  "vendorInvoiceNo": "VENDOR-1759398238-313",
+  "poNumbers": [],
+  "vendorId": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
+  "fiscalYearId": "43aba0df-70e4-435e-8463-d8f730d19e0b",
+  "acqUnitIds": [],
+  "nextInvoiceLineNumber": 2,
+  "metadata": {
+    "createdDate": "2025-10-02T09:43:58.434+00:00",
+    "createdByUserId": "157b6b9f-692f-4029-b350-2a0e34f5f41f",
+    "updatedDate": "2025-10-02T09:43:59.271+00:00",
+    "updatedByUserId": "157b6b9f-692f-4029-b350-2a0e34f5f41f"
+  }
+}
