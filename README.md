@@ -6,11 +6,7 @@
 
 ## Commands
 
-### Build & Run
-
-- Supported flags:
-  - Persistent HTTP thread count: `-threads`
-  - Enable debug output of HTTP request and response: `-debug`
+### Run
 
 ```shell
 ./run.sh
