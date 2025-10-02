@@ -28,4 +28,4 @@ golangci-lint run
 echo "Building and running..."
 mkdir -p ./bin
 env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin . 
-./bin/lock-tester.exe --threads 200
+./bin/lock-tester.exe --threads=200
