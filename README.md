@@ -9,12 +9,12 @@
 ### Build & Run
 
 - Supported flags:
-  - Persistent HTTP thread count: `-threads`
+  - Persistent HTTP thread count: `-threads` (by default is 50)
   - Enable debug output of HTTP request and response: `-debug`
 
 ```shell
 mkdir -p ./bin
-env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin . && ./bin/lock-tester.exe --threads=200
+env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin . && ./bin/lock-tester.exe
 ```
 
 ### Build & Run from a Shell script
