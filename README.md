@@ -8,9 +8,9 @@
 
 ### Build & Run
 
-- Supported flags:
-  - Persistent HTTP thread count: `-threads` (by default is 50)
-  - Enable debug output of HTTP request and response: `-debug`
+- Supported arguments:
+  - `-threads NUMBER` - Set number of threads for the application (default: 50)
+  - `-debug` - Enable debug mode
 
 ```shell
 mkdir -p ./bin
