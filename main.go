@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log/slog"
+	"maps"
 	"math/rand"
 	"sync"
 	"time"
@@ -16,12 +17,16 @@ import (
 const (
 	CommandName string = "Main"
 
-	FundId         string = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd"
+	VendorId string = "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+
 	FiscalYearId   string = "43aba0df-70e4-435e-8463-d8f730d19e0b"
+	FundId         string = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd"
+	FundId2        string = "55f48dc6-efa7-4cfe-bc7c-4786efe493e3"
 	BudgetId       string = "076e9607-2181-42a4-94f7-ed379af0f810"
-	BatchGroupId   string = "cd592659-77aa-4eb3-ac34-c9a4657bb20f"
-	VendorId       string = "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+	BudgetId2      string = "de6761f6-1f64-4b5d-a5bc-98862c498c21"
 	ExpenseClassId string = "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2"
+
+	BatchGroupId string = "cd592659-77aa-4eb3-ac34-c9a4657bb20f"
 )
 
 var (
@@ -38,8 +43,8 @@ func main() {
 	token := getAccessToken()
 	headers := util.CreateHeadersWithToken(token)
 
-	recalculateBudget(headers)
-	createBudgetAllocation(headers)
+	recalculateBudgets(headers)
+	createBudgetAllocations(headers)
 
 	invoiceIdCh := make(chan string, threadCount)
 	var invoiceCreationWaitGroup sync.WaitGroup
@@ -90,17 +95,28 @@ func getAccessToken() string {
 	return resp["okapiToken"].(string)
 }
 
-func createBudgetAllocation(headers map[string]string) {
+func createBudgetAllocations(headers map[string]string) {
 	budgetAllocationPayload := map[string]any{
-		"transactionsToCreate": []map[string]any{{
-			"toFundId":        FundId,
-			"amount":          "10000",
-			"id":              uuid.New().String(),
-			"transactionType": "Allocation",
-			"fiscalYearId":    FiscalYearId,
-			"currency":        "USD",
-			"source":          "User",
-		}},
+		"transactionsToCreate": []map[string]any{
+			{
+				"toFundId":        FundId,
+				"amount":          "10000",
+				"id":              uuid.New().String(),
+				"transactionType": "Allocation",
+				"fiscalYearId":    FiscalYearId,
+				"currency":        "USD",
+				"source":          "User",
+			},
+			{
+				"toFundId":        FundId2,
+				"amount":          "10000",
+				"id":              uuid.New().String(),
+				"transactionType": "Allocation",
+				"fiscalYearId":    FiscalYearId,
+				"currency":        "USD",
+				"source":          "User",
+			},
+		},
 	}
 	bytes, err := json.Marshal(budgetAllocationPayload)
 	if err != nil {
@@ -109,12 +125,13 @@ func createBudgetAllocation(headers map[string]string) {
 	}
 
 	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, "finance/transactions/batch-all-or-nothing"), enableDebug, bytes, headers)
-	slog.Info(CommandName, util.GetFuncName(), "Budget allocation created")
+	slog.Info(CommandName, util.GetFuncName(), "Budget allocations created")
 }
 
-func recalculateBudget(headers map[string]string) {
+func recalculateBudgets(headers map[string]string) {
 	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", BudgetId)), enableDebug, []byte{}, headers)
-	slog.Info(CommandName, util.GetFuncName(), "Budget recalculated")
+	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", BudgetId2)), enableDebug, []byte{}, headers)
+	slog.Info(CommandName, util.GetFuncName(), "Budgets recalculated")
 }
 
 func createInvoiceAndInvoiceLines(headers map[string]string, invoiceIdCh chan string, waitGroup *sync.WaitGroup) {
@@ -135,16 +152,30 @@ func createInvoice(headers map[string]string) string {
 		"chkSubscriptionOverlap": true,
 		"currency":               "USD",
 		"source":                 "User",
-		"adjustments":            []any{},
-		"batchGroupId":           BatchGroupId,
-		"status":                 "Open",
-		"exportToAccounting":     true,
-		"vendorId":               VendorId,
-		"invoiceDate":            time.Now().Format("2006-01-02"),
-		"vendorInvoiceNo":        fmt.Sprintf("VENDOR-%d-%d", time.Now().Unix(), rand.Intn(10000)),
-		"accountingCode":         "G64758-74834",
-		"paymentMethod":          "Credit Card",
-		"accountNo":              nil,
+		"adjustments": []map[string]any{{
+			"type":            "Amount",
+			"description":     "1",
+			"value":           10,
+			"relationToTotal": "In addition to",
+			"prorate":         "Not prorated",
+			"fundDistributions": []map[string]any{{
+				"distributionType": "percentage",
+				"value":            100,
+				"fundId":           FundId,
+				"code":             "AFRICAHIST",
+				"encumbrance":      nil,
+				"expenseClassId":   ExpenseClassId,
+			}},
+		}},
+		"batchGroupId":       BatchGroupId,
+		"status":             "Open",
+		"exportToAccounting": true,
+		"vendorId":           VendorId,
+		"invoiceDate":        time.Now().Format("2006-01-02"),
+		"vendorInvoiceNo":    fmt.Sprintf("VENDOR-%d-%d", time.Now().Unix(), rand.Intn(10000)),
+		"accountingCode":     "G64758-74834",
+		"paymentMethod":      "Credit Card",
+		"accountNo":          nil,
 	}
 	bytes, err := json.Marshal(invoicePayload)
 	if err != nil {
@@ -164,10 +195,10 @@ func createInvoiceLine(headers map[string]string, invoiceId string) string {
 		"fundDistributions": []map[string]any{{
 			"distributionType": "percentage",
 			"value":            100,
-			"fundId":           FundId,
-			"code":             "AFRICAHIST",
+			"fundId":           FundId2,
+			"code":             "ASIAHIST",
 			"encumbrance":      nil,
-			"expenseClassId":   ExpenseClassId,
+			"expenseClassId":   nil,
 		}},
 		"releaseEncumbrance": false,
 		"description":        "Test invoice line",
@@ -207,27 +238,31 @@ func getInvoiceById(headers map[string]string, invoiceId string) map[string]any 
 }
 
 func approveInvoice(headers map[string]string, invoice map[string]any) {
-	invoice["status"] = "Approved"
+	invoiceCopy := make(map[string]any)
+	maps.Copy(invoiceCopy, invoice)
+	invoiceCopy["status"] = "Approved"
 
-	bytes, err := json.Marshal(invoice)
+	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
 		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
 		panic(err)
 	}
 
-	invoiceId := invoice["id"].(string)
+	invoiceId := invoiceCopy["id"].(string)
 	util.DoPutReturnNoContent(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, bytes, headers)
 }
 
 func payInvoice(headers map[string]string, invoice map[string]any) {
-	invoice["status"] = "Paid"
+	invoiceCopy := make(map[string]any)
+	maps.Copy(invoiceCopy, invoice)
+	invoiceCopy["status"] = "Paid"
 
-	bytes, err := json.Marshal(invoice)
+	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
 		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
 		panic(err)
 	}
 
-	invoiceId := invoice["id"].(string)
+	invoiceId := invoiceCopy["id"].(string)
 	util.DoPutReturnNoContent(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, bytes, headers)
 }

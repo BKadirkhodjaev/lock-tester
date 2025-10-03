@@ -48,3 +48,5 @@ env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin .
 # With threads and debug
 ./run.sh -threads 200 -debug
 ```
+
+> Can be combined with `tee` and outputted into a log file, e.g. `./run.sh -threads 50 2>&1 | tee "logs/run-$(date +%Y-%m_%d_%H%M%S)-50.log"`

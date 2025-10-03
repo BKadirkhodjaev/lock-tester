@@ -2,15 +2,33 @@
   "chkSubscriptionOverlap": true,
   "currency": "USD",
   "source": "User",
-  "adjustments": [],
+  "adjustments": [
+    {
+      "type": "Amount",
+      "description": "1",
+      "value": 10,
+      "relationToTotal": "In addition to",
+      "prorate": "Not prorated",
+      "fundDistributions": [
+        {
+          "distributionType": "percentage",
+          "value": 100,
+          "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
+          "code": "AFRICAHIST",
+          "encumbrance": null,
+          "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2"
+        }
+      ]
+    }
+  ],
   "batchGroupId": "cd592659-77aa-4eb3-ac34-c9a4657bb20f",
   "status": "Open",
   "exportToAccounting": true,
   "vendorId": "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1",
-  "invoiceDate": "2025-10-02",
+  "invoiceDate": "2025-10-03",
   "vendorInvoiceNo": "1",
   "accountingCode": "G64758-74834",
   "paymentMethod": "Credit Card",
   "accountNo": null,
-  "id": "d574ff0d-ac08-47ac-948c-7365060c285b"
+  "id": "366d6c8c-9dfe-4d65-8783-6177ce6d9627"
 }

@@ -1,19 +1,19 @@
 {
-  "invoiceId": "d574ff0d-ac08-47ac-948c-7365060c285b",
+  "invoiceId": "366d6c8c-9dfe-4d65-8783-6177ce6d9627",
   "invoiceLineStatus": "Open",
   "fundDistributions": [
     {
       "distributionType": "percentage",
       "value": 100,
-      "fundId": "7fbd5d84-62d1-44c6-9c45-6cb173998bbd",
-      "code": "AFRICAHIST",
+      "fundId": "55f48dc6-efa7-4cfe-bc7c-4786efe493e3",
+      "code": "ASIAHIST",
       "encumbrance": null,
-      "expenseClassId": "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2"
+      "expenseClassId": null
     }
   ],
   "releaseEncumbrance": false,
-  "description": "1",
-  "subTotal": 10,
   "quantity": "1",
-  "id": "e3608c0b-209a-466e-b3b7-bf4afffb11a8"
+  "subTotal": 10,
+  "description": "1",
+  "id": "a8460b94-6fb7-43f1-93b3-845814fc9a39"
 }
