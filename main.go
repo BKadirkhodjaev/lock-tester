@@ -30,6 +30,7 @@ var (
 )
 
 func main() {
+	start := time.Now()
 	slog.Info(CommandName, util.GetFuncName(), "Started")
 
 	parseArgs()
@@ -40,19 +41,32 @@ func main() {
 	recalculateBudget(headers)
 	createBudgetAllocation(headers)
 
-	var invoiceIds []string
+	invoiceIdCh := make(chan string, threadCount)
+	var invoiceCreationWaitGroup sync.WaitGroup
+	invoiceCreationWaitGroup.Add(threadCount)
 	for range threadCount {
-		invoiceId := createInvoiceAndInvoiceLines(token)
+		go createInvoiceAndInvoiceLines(headers, invoiceIdCh, &invoiceCreationWaitGroup)
+	}
+
+	go func() {
+		invoiceCreationWaitGroup.Wait()
+		close(invoiceIdCh)
+	}()
+
+	var invoiceIds []string
+	for invoiceId := range invoiceIdCh {
 		invoiceIds = append(invoiceIds, invoiceId)
 	}
 
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(len(invoiceIds))
+	var invoiceApproveAndPayWaitGroup sync.WaitGroup
+	invoiceApproveAndPayWaitGroup.Add(len(invoiceIds))
 	for _, invoiceId := range invoiceIds {
-		go approveAndPayInvoice(headers, invoiceId, &waitGroup)
+		go approveAndPayInvoice(headers, invoiceId, &invoiceApproveAndPayWaitGroup)
 	}
-	waitGroup.Wait()
-	slog.Info(CommandName, util.GetFuncName(), "Stopped")
+	invoiceApproveAndPayWaitGroup.Wait()
+
+	elapsed := time.Since(start) / 1000 / 1000 / 1000
+	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Stopped, elapsed %d seconds", elapsed))
 }
 
 func parseArgs() {
@@ -103,17 +117,16 @@ func recalculateBudget(headers map[string]string) {
 	slog.Info(CommandName, util.GetFuncName(), "Budget recalculated")
 }
 
-func createInvoiceAndInvoiceLines(token string) string {
-	slog.Info(CommandName, util.GetFuncName(), "Creating invoice and invoice lines")
-	headers := util.CreateHeadersWithToken(token)
+func createInvoiceAndInvoiceLines(headers map[string]string, invoiceIdCh chan string, waitGroup *sync.WaitGroup) {
+	defer waitGroup.Done()
 
 	invoiceId := createInvoice(headers)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice with ID: %s", invoiceId))
+	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice %s", invoiceId))
 
 	invoiceLineId := createInvoiceLine(headers, invoiceId)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice line with ID: %s", invoiceLineId))
+	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice line %s", invoiceLineId))
 
-	return invoiceId
+	invoiceIdCh <- invoiceId
 }
 
 func createInvoice(headers map[string]string) string {
@@ -172,15 +185,18 @@ func createInvoiceLine(headers map[string]string, invoiceId string) string {
 }
 
 func approveAndPayInvoice(headers map[string]string, invoiceId string, waitGroup *sync.WaitGroup) {
-	slog.Info(CommandName, util.GetFuncName(), "Starting approve and pay process")
 	defer waitGroup.Done()
 
 	invoiceBeforeApproval := getInvoiceById(headers, invoiceId)
+	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Received invoice %s before approval", invoiceId))
+
 	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Approving invoice %s", invoiceId))
 	approveInvoice(headers, invoiceBeforeApproval)
 	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Approved invoice %s", invoiceId))
 
 	invoiceBeforePayment := getInvoiceById(headers, invoiceId)
+	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Received invoice %s before payment", invoiceId))
+
 	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Paying invoice %s", invoiceId))
 	payInvoice(headers, invoiceBeforePayment)
 	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Paid invoice %s", invoiceId))

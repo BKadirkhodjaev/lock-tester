@@ -12,16 +12,18 @@ func CheckStatusCodes(commandName string, resp *http.Response) {
 		return
 	}
 
-	LogErrorPanic(commandName, fmt.Sprintf("util.CheckStatusCodes error - Unacceptable request status %d", resp.StatusCode))
+	DumpHttpResponse(commandName, resp, true)
+
+	LogErrorPanic(commandName, fmt.Sprintf("util.CheckStatusCodes error - Unacceptable request status %d for URL: %s", resp.StatusCode, resp.Request.URL.String()))
 }
 
-func DumpHttpBody(commandName string, enableDebug bool, bodyBytes []byte) {
+func DumpHttpBody(commandName string, enableDebug bool, bytes []byte) {
 	if !enableDebug {
 		return
 	}
 
 	fmt.Println("###### Dumping HTTP Request Body ######")
-	fmt.Println(string(bodyBytes))
+	fmt.Println(string(bytes))
 	fmt.Println()
 }
 
@@ -30,14 +32,14 @@ func DumpHttpRequest(commandName string, req *http.Request, enableDebug bool) {
 		return
 	}
 
-	reqBytes, err := httputil.DumpRequest(req, true)
+	bytes, err := httputil.DumpRequest(req, true)
 	if err != nil {
 		slog.Error(commandName, "httputil.DumpRequest error", "")
 		panic(err)
 	}
 
 	fmt.Println("###### Dumping HTTP Request ######")
-	fmt.Println(string(reqBytes))
+	fmt.Println(string(bytes))
 	fmt.Println()
 }
 
@@ -46,13 +48,13 @@ func DumpHttpResponse(commandName string, resp *http.Response, enableDebug bool)
 		return
 	}
 
-	respBytes, err := httputil.DumpResponse(resp, true)
+	bytes, err := httputil.DumpResponse(resp, true)
 	if err != nil {
 		slog.Error(commandName, "httputil.DumpResponse error", "")
 		panic(err)
 	}
 
 	fmt.Println("###### Dumping HTTP Response ######")
-	fmt.Println(string(respBytes))
+	fmt.Println(string(bytes))
 	fmt.Println()
 }

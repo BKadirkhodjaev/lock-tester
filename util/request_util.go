@@ -6,6 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
+	"time"
+
+	"github.com/hashicorp/go-retryablehttp"
 )
 
 func CreateEndpoint(commandName string, path string) string {
@@ -39,20 +42,29 @@ func CreateHeadersWithToken(token string) map[string]string {
 	return headers
 }
 
+func createRetryableClient() *retryablehttp.Client {
+	client := retryablehttp.NewClient()
+	client.RetryMax = 30
+	client.RetryWaitMax = 500 * time.Second
+	client.Logger = nil
+
+	return client
+}
+
 func DoPostReturnMapStringInteface(commandName string, url string, enableDebug bool, bodyBytes []byte, headers map[string]string) map[string]any {
 	var respMap map[string]any
 	DumpHttpBody(commandName, enableDebug, bodyBytes)
 
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
+	req, err := retryablehttp.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.NewRequest error")
 		panic(err)
 	}
 
-	AddRequestHeaders(req, headers)
-	DumpHttpRequest(commandName, req, enableDebug)
+	AddRequestHeaders(req.Request, headers)
+	DumpHttpRequest(commandName, req.Request, enableDebug)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := createRetryableClient().Do(req)
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.DefaultClient.Do error")
 		panic(err)
@@ -85,16 +97,16 @@ func DoPostReturnMapStringInteface(commandName string, url string, enableDebug b
 func DoGetReturnMapStringInterface(commandName string, url string, enableDebug bool, headers map[string]string) map[string]any {
 	var respMap map[string]any
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := retryablehttp.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.NewRequest error")
 		panic(err)
 	}
 
-	AddRequestHeaders(req, headers)
-	DumpHttpRequest(commandName, req, enableDebug)
+	AddRequestHeaders(req.Request, headers)
+	DumpHttpRequest(commandName, req.Request, enableDebug)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := createRetryableClient().Do(req)
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.DefaultClient.Do error")
 		panic(err)
@@ -127,16 +139,16 @@ func DoGetReturnMapStringInterface(commandName string, url string, enableDebug b
 func DoPutReturnNoContent(commandName string, url string, enableDebug bool, bodyBytes []byte, headers map[string]string) {
 	DumpHttpBody(commandName, enableDebug, bodyBytes)
 
-	req, err := http.NewRequest(http.MethodPut, url, bytes.NewBuffer(bodyBytes))
+	req, err := retryablehttp.NewRequest(http.MethodPut, url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.NewRequest error")
 		panic(err)
 	}
 
-	AddRequestHeaders(req, headers)
-	DumpHttpRequest(commandName, req, enableDebug)
+	AddRequestHeaders(req.Request, headers)
+	DumpHttpRequest(commandName, req.Request, enableDebug)
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := createRetryableClient().Do(req)
 	if err != nil {
 		slog.Error(commandName, GetFuncName(), "http.DefaultClient.Do error")
 		panic(err)

@@ -7,7 +7,7 @@ import (
 )
 
 func LogErrorPanic(commandName string, errorMessage string) {
-	slog.Error(commandName, errorMessage, "")
+	slog.Error(commandName, GetFuncName(), errorMessage)
 	panic(errors.New(errorMessage))
 }
 
