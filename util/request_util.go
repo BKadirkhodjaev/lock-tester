@@ -42,15 +42,6 @@ func CreateHeadersWithToken(token string) map[string]string {
 	return headers
 }
 
-func createRetryableClient() *retryablehttp.Client {
-	client := retryablehttp.NewClient()
-	client.RetryMax = 30
-	client.RetryWaitMax = 500 * time.Second
-	client.Logger = nil
-
-	return client
-}
-
 func DoPostReturnMapStringInteface(commandName string, url string, enableDebug bool, bodyBytes []byte, headers map[string]string) map[string]any {
 	var respMap map[string]any
 	DumpHttpBody(commandName, enableDebug, bodyBytes)
@@ -167,4 +158,13 @@ func AddRequestHeaders(req *http.Request, headers map[string]string) {
 	for key, value := range headers {
 		req.Header.Add(key, value)
 	}
+}
+
+func createRetryableClient() *retryablehttp.Client {
+	client := retryablehttp.NewClient()
+	client.RetryMax = 30
+	client.RetryWaitMax = 500 * time.Second
+	client.Logger = nil
+
+	return client
 }
