@@ -36,8 +36,8 @@ const (
 	FundCode2 string = "ASIAHIST"
 
 	// Financial Values
-	AllocationAmount  string  = "10000"
-	AdjustmentValue   int     = 10
+	AllocationAmount  float64 = 10000.0
+	AdjustmentValue   float64 = 10.0
 	SubTotal          float64 = 10.0
 	DistributionValue int     = 100
 
