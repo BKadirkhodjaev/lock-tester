@@ -129,8 +129,9 @@ func createBudgetAllocations(headers map[string]string) {
 }
 
 func recalculateBudgets(headers map[string]string) {
-	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", BudgetId)), enableDebug, []byte{}, headers)
-	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", BudgetId2)), enableDebug, []byte{}, headers)
+	for _, budgetId := range []string{BudgetId, BudgetId2} {
+		util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", budgetId)), enableDebug, []byte{}, headers)
+	}
 	slog.Info(CommandName, util.GetFuncName(), "Budgets recalculated")
 }
 
@@ -237,10 +238,15 @@ func getInvoiceById(headers map[string]string, invoiceId string) map[string]any 
 	return util.DoGetReturnMapStringInterface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, headers)
 }
 
-func approveInvoice(headers map[string]string, invoice map[string]any) {
+func copyInvoiceWithStatus(invoice map[string]any, status string) map[string]any {
 	invoiceCopy := make(map[string]any)
 	maps.Copy(invoiceCopy, invoice)
-	invoiceCopy["status"] = "Approved"
+	invoiceCopy["status"] = status
+	return invoiceCopy
+}
+
+func approveInvoice(headers map[string]string, invoice map[string]any) {
+	invoiceCopy := copyInvoiceWithStatus(invoice, "Approved")
 
 	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
@@ -253,9 +259,7 @@ func approveInvoice(headers map[string]string, invoice map[string]any) {
 }
 
 func payInvoice(headers map[string]string, invoice map[string]any) {
-	invoiceCopy := make(map[string]any)
-	maps.Copy(invoiceCopy, invoice)
-	invoiceCopy["status"] = "Paid"
+	invoiceCopy := copyInvoiceWithStatus(invoice, "Paid")
 
 	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
