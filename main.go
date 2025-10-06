@@ -17,16 +17,47 @@ import (
 const (
 	CommandName string = "Main"
 
-	VendorId string = "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
-
+	// FOLIO Entity IDs
+	VendorId       string = "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
+	BatchGroupId   string = "cd592659-77aa-4eb3-ac34-c9a4657bb20f"
 	FiscalYearId   string = "43aba0df-70e4-435e-8463-d8f730d19e0b"
-	FundId         string = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd"
-	FundId2        string = "55f48dc6-efa7-4cfe-bc7c-4786efe493e3"
-	BudgetId       string = "076e9607-2181-42a4-94f7-ed379af0f810"
-	BudgetId2      string = "de6761f6-1f64-4b5d-a5bc-98862c498c21"
 	ExpenseClassId string = "1bcc3247-99bf-4dca-9b0f-7bc51a2998c2"
 
-	BatchGroupId string = "cd592659-77aa-4eb3-ac34-c9a4657bb20f"
+	// Fund IDs
+	FundId  string = "7fbd5d84-62d1-44c6-9c45-6cb173998bbd"
+	FundId2 string = "55f48dc6-efa7-4cfe-bc7c-4786efe493e3"
+
+	// Budget IDs
+	BudgetId  string = "076e9607-2181-42a4-94f7-ed379af0f810"
+	BudgetId2 string = "de6761f6-1f64-4b5d-a5bc-98862c498c21"
+
+	// Fund Codes
+	FundCode1 string = "AFRICAHIST"
+	FundCode2 string = "ASIAHIST"
+
+	// Financial Values
+	AllocationAmount  string  = "10000"
+	AdjustmentValue   int     = 10
+	SubTotal          float64 = 10.0
+	DistributionValue int     = 100
+
+	// Transaction & Business Logic
+	TransactionType  string = "Allocation"
+	Currency         string = "USD"
+	Source           string = "User"
+	InvoiceStatus    string = "Open"
+	DistributionType string = "percentage"
+	AdjustmentType   string = "Amount"
+	RelationToTotal  string = "In addition to"
+	Prorate          string = "Not prorated"
+	Quantity         string = "1"
+
+	// External System Codes
+	AccountingCode string = "G64758-74834"
+	PaymentMethod  string = "Credit Card"
+
+	// Descriptions & Text
+	InvoiceLineDescription string = "Test invoice line"
 )
 
 var (
@@ -99,22 +130,22 @@ func createBudgetAllocations(headers map[string]string) {
 	budgetAllocationPayload := map[string]any{
 		"transactionsToCreate": []map[string]any{
 			{
-				"toFundId":        FundId,
-				"amount":          "10000",
 				"id":              uuid.New().String(),
-				"transactionType": "Allocation",
+				"toFundId":        FundId,
+				"amount":          AllocationAmount,
+				"transactionType": TransactionType,
 				"fiscalYearId":    FiscalYearId,
-				"currency":        "USD",
-				"source":          "User",
+				"currency":        Currency,
+				"source":          Source,
 			},
 			{
-				"toFundId":        FundId2,
-				"amount":          "10000",
 				"id":              uuid.New().String(),
-				"transactionType": "Allocation",
+				"toFundId":        FundId2,
+				"amount":          AllocationAmount,
+				"transactionType": TransactionType,
 				"fiscalYearId":    FiscalYearId,
-				"currency":        "USD",
-				"source":          "User",
+				"currency":        Currency,
+				"source":          Source,
 			},
 		},
 	}
@@ -151,31 +182,31 @@ func createInvoice(headers map[string]string) string {
 	invoicePayload := map[string]any{
 		"id":                     uuid.New().String(),
 		"chkSubscriptionOverlap": true,
-		"currency":               "USD",
-		"source":                 "User",
+		"currency":               Currency,
+		"source":                 Source,
 		"adjustments": []map[string]any{{
-			"type":            "Amount",
+			"type":            AdjustmentType,
 			"description":     "1",
-			"value":           10,
-			"relationToTotal": "In addition to",
-			"prorate":         "Not prorated",
+			"value":           AdjustmentValue,
+			"relationToTotal": RelationToTotal,
+			"prorate":         Prorate,
 			"fundDistributions": []map[string]any{{
-				"distributionType": "percentage",
-				"value":            100,
+				"distributionType": DistributionType,
+				"value":            DistributionValue,
 				"fundId":           FundId,
-				"code":             "AFRICAHIST",
+				"code":             FundCode1,
 				"encumbrance":      nil,
 				"expenseClassId":   ExpenseClassId,
 			}},
 		}},
 		"batchGroupId":       BatchGroupId,
-		"status":             "Open",
+		"status":             InvoiceStatus,
 		"exportToAccounting": true,
 		"vendorId":           VendorId,
 		"invoiceDate":        time.Now().Format("2006-01-02"),
 		"vendorInvoiceNo":    fmt.Sprintf("VENDOR-%d-%d", time.Now().Unix(), rand.Intn(10000)),
-		"accountingCode":     "G64758-74834",
-		"paymentMethod":      "Credit Card",
+		"accountingCode":     AccountingCode,
+		"paymentMethod":      PaymentMethod,
 		"accountNo":          nil,
 	}
 	bytes, err := json.Marshal(invoicePayload)
@@ -192,19 +223,19 @@ func createInvoiceLine(headers map[string]string, invoiceId string) string {
 	invoiceLinePayload := map[string]any{
 		"id":                uuid.New().String(),
 		"invoiceId":         invoiceId,
-		"invoiceLineStatus": "Open",
+		"invoiceLineStatus": InvoiceStatus,
 		"fundDistributions": []map[string]any{{
-			"distributionType": "percentage",
-			"value":            100,
+			"distributionType": DistributionType,
+			"value":            DistributionValue,
 			"fundId":           FundId2,
-			"code":             "ASIAHIST",
+			"code":             FundCode2,
 			"encumbrance":      nil,
 			"expenseClassId":   nil,
 		}},
 		"releaseEncumbrance": false,
-		"description":        "Test invoice line",
-		"subTotal":           10.0,
-		"quantity":           "1",
+		"description":        InvoiceLineDescription,
+		"subTotal":           SubTotal,
+		"quantity":           Quantity,
 	}
 	bytes, err := json.Marshal(invoiceLinePayload)
 	if err != nil {
@@ -238,13 +269,6 @@ func getInvoiceById(headers map[string]string, invoiceId string) map[string]any 
 	return util.DoGetReturnMapStringInterface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, headers)
 }
 
-func copyInvoiceWithStatus(invoice map[string]any, status string) map[string]any {
-	invoiceCopy := make(map[string]any)
-	maps.Copy(invoiceCopy, invoice)
-	invoiceCopy["status"] = status
-	return invoiceCopy
-}
-
 func approveInvoice(headers map[string]string, invoice map[string]any) {
 	invoiceCopy := copyInvoiceWithStatus(invoice, "Approved")
 
@@ -269,4 +293,12 @@ func payInvoice(headers map[string]string, invoice map[string]any) {
 
 	invoiceId := invoiceCopy["id"].(string)
 	util.DoPutReturnNoContent(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, bytes, headers)
+}
+
+func copyInvoiceWithStatus(invoice map[string]any, status string) map[string]any {
+	invoiceCopy := make(map[string]any)
+	maps.Copy(invoiceCopy, invoice)
+	invoiceCopy["status"] = status
+
+	return invoiceCopy
 }
