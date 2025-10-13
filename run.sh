@@ -51,7 +51,7 @@ golangci-lint run
 
 echo "Building and running..."
 mkdir -p ./bin
-env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin . 
+env GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o ./bin ./cmd/lock-tester 
 
 ARGS=""
 if [[ -n "$THREADS" ]]; then
