@@ -8,17 +8,17 @@ import (
 	"net/http/httputil"
 )
 
-func dumpHttpBody(bytes []byte) {
+func dumpBody(bytes []byte) {
 	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
 
-	fmt.Println("###### Dumping HTTP Request Body ######")
+	fmt.Println("### Dumping HTTP Request Body ###")
 	fmt.Println(string(bytes))
 	fmt.Println()
 }
 
-func dumpHttpRequest(logger *slog.Logger, req *http.Request) {
+func dumpRequest(logger *slog.Logger, req *http.Request) {
 	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
@@ -29,12 +29,12 @@ func dumpHttpRequest(logger *slog.Logger, req *http.Request) {
 		panic(err)
 	}
 
-	fmt.Println("###### Dumping HTTP Request ######")
+	fmt.Println("### Dumping HTTP Request ###")
 	fmt.Println(string(bytes))
 	fmt.Println()
 }
 
-func dumpHttpResponse(logger *slog.Logger, resp *http.Response) {
+func dumpResponse(logger *slog.Logger, resp *http.Response) {
 	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
 		return
 	}
@@ -45,7 +45,7 @@ func dumpHttpResponse(logger *slog.Logger, resp *http.Response) {
 		panic(err)
 	}
 
-	fmt.Println("###### Dumping HTTP Response ######")
+	fmt.Println("### Dumping HTTP Response ###")
 	fmt.Println(string(bytes))
 	fmt.Println()
 }

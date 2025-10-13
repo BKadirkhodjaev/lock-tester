@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	// System properties
+	// System Properties
 	URI      string = "http://localhost:8000"
 	Tenant   string = "diku"
 	Username string = "diku_admin"
@@ -93,16 +93,13 @@ func main() {
 	}))
 	slog.SetDefault(logger)
 
-	a := &application{
-		logger: logger,
-		client: &client.RequestClient{
-			Logger:       logger,
-			URI:          URI,
-			Tenant:       Tenant,
-			RetryMax:     30,
-			RetryWaitMax: 500 * time.Second,
-		},
-	}
+	a := &application{logger: logger, client: &client.RequestClient{
+		Logger:       logger,
+		URI:          URI,
+		Tenant:       Tenant,
+		RetryMax:     30,
+		RetryWaitMax: 500 * time.Second,
+	}}
 
 	a.logger.Info("Started")
 
@@ -113,14 +110,14 @@ func main() {
 	a.createBudgetAllocations(headers)
 
 	invoiceIdCh := make(chan string, threadCount)
-	var invoiceCreationWaitGroup sync.WaitGroup
-	invoiceCreationWaitGroup.Add(threadCount)
+	var invoiceCreationWg sync.WaitGroup
+	invoiceCreationWg.Add(threadCount)
 	for range threadCount {
-		go a.createInvoiceAndInvoiceLines(headers, invoiceIdCh, &invoiceCreationWaitGroup)
+		go a.createInvoiceAndInvoiceLines(headers, invoiceIdCh, &invoiceCreationWg)
 	}
 
 	go func() {
-		invoiceCreationWaitGroup.Wait()
+		invoiceCreationWg.Wait()
 		close(invoiceIdCh)
 	}()
 
@@ -129,12 +126,12 @@ func main() {
 		invoiceIds = append(invoiceIds, invoiceId)
 	}
 
-	var invoiceApproveAndPayWaitGroup sync.WaitGroup
-	invoiceApproveAndPayWaitGroup.Add(len(invoiceIds))
+	var invoiceApproveAndPayWg sync.WaitGroup
+	invoiceApproveAndPayWg.Add(len(invoiceIds))
 	for _, invoiceId := range invoiceIds {
-		go a.approveAndPayInvoice(headers, invoiceId, &invoiceApproveAndPayWaitGroup)
+		go a.approveAndPayInvoice(headers, invoiceId, &invoiceApproveAndPayWg)
 	}
-	invoiceApproveAndPayWaitGroup.Wait()
+	invoiceApproveAndPayWg.Wait()
 
 	elapsed := time.Since(start) / 1000 / 1000 / 1000
 	a.logger.Info(fmt.Sprintf("Stopped, elapsed %d seconds", elapsed))
@@ -147,7 +144,7 @@ func (a application) getAccessToken() string {
 		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("authn/login"), bytes, headers)
+	resp := a.client.DoPostReturnMapStringAny(a.client.CreateEndpoint("authn/login"), bytes, headers)
 
 	return resp["okapiToken"].(string)
 }
@@ -181,13 +178,13 @@ func (a application) createBudgetAllocations(headers map[string]string) {
 		panic(err)
 	}
 
-	a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("finance/transactions/batch-all-or-nothing"), bytes, headers)
+	a.client.DoPostReturnMapStringAny(a.client.CreateEndpoint("finance/transactions/batch-all-or-nothing"), bytes, headers)
 	a.logger.Info("Budget allocations created")
 }
 
 func (a application) recalculateBudgets(headers map[string]string) {
 	for _, budgetId := range []string{BudgetId, BudgetId2} {
-		a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint(fmt.Sprintf("finance/budgets/%s/recalculate", budgetId)), []byte{}, headers)
+		a.client.DoPostReturnMapStringAny(a.client.CreateEndpoint(fmt.Sprintf("finance/budgets/%s/recalculate", budgetId)), []byte{}, headers)
 	}
 	a.logger.Info("Budgets recalculated")
 }
@@ -240,7 +237,7 @@ func (a application) createInvoice(headers map[string]string) string {
 		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("invoice/invoices"), bytes, headers)
+	resp := a.client.DoPostReturnMapStringAny(a.client.CreateEndpoint("invoice/invoices"), bytes, headers)
 
 	return resp["id"].(string)
 }
@@ -268,7 +265,7 @@ func (a application) createInvoiceLine(headers map[string]string, invoiceId stri
 		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("invoice/invoice-lines"), bytes, headers)
+	resp := a.client.DoPostReturnMapStringAny(a.client.CreateEndpoint("invoice/invoice-lines"), bytes, headers)
 
 	return resp["id"].(string)
 }
@@ -292,7 +289,7 @@ func (a application) approveAndPayInvoice(headers map[string]string, invoiceId s
 }
 
 func (a application) getInvoiceById(headers map[string]string, invoiceId string) map[string]any {
-	return a.client.DoGetReturnMapStringInterface(a.client.CreateEndpoint(fmt.Sprintf("invoice/invoices/%s", invoiceId)), headers)
+	return a.client.DoGetReturnMapStringAny(a.client.CreateEndpoint(fmt.Sprintf("invoice/invoices/%s", invoiceId)), headers)
 }
 
 func (a application) approveInvoice(headers map[string]string, invoice map[string]any) {

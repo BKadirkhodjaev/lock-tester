@@ -53,9 +53,9 @@ func (r RequestClient) CreateHeadersWithToken(token string) map[string]string {
 	return headers
 }
 
-func (r RequestClient) DoPostReturnMapStringInteface(url string, bodyBytes []byte, headers map[string]string) map[string]any {
+func (r RequestClient) DoPostReturnMapStringAny(url string, bodyBytes []byte, headers map[string]string) map[string]any {
 	var respMap map[string]any
-	dumpHttpBody(bodyBytes)
+	dumpBody(bodyBytes)
 
 	req, err := retryablehttp.NewRequest(http.MethodPost, url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
@@ -64,7 +64,7 @@ func (r RequestClient) DoPostReturnMapStringInteface(url string, bodyBytes []byt
 	}
 
 	addRequestHeaders(req.Request, headers)
-	dumpHttpRequest(r.Logger, req.Request)
+	dumpRequest(r.Logger, req.Request)
 
 	resp, err := r.createRetryableClient().Do(req)
 	if err != nil {
@@ -72,13 +72,13 @@ func (r RequestClient) DoPostReturnMapStringInteface(url string, bodyBytes []byt
 		panic(err)
 	}
 	defer func() {
-		checkStatusCodes(r.Logger, resp)
+		checkResponseStatusCodes(r.Logger, resp)
 		if err := resp.Body.Close(); err != nil {
 			r.Logger.Error(err.Error())
 		}
 	}()
 
-	dumpHttpResponse(r.Logger, resp)
+	dumpResponse(r.Logger, resp)
 
 	if resp.ContentLength == 0 {
 		return map[string]any{}
@@ -96,7 +96,7 @@ func (r RequestClient) DoPostReturnMapStringInteface(url string, bodyBytes []byt
 	return respMap
 }
 
-func (r RequestClient) DoGetReturnMapStringInterface(url string, headers map[string]string) map[string]any {
+func (r RequestClient) DoGetReturnMapStringAny(url string, headers map[string]string) map[string]any {
 	var respMap map[string]any
 
 	req, err := retryablehttp.NewRequest(http.MethodGet, url, nil)
@@ -106,7 +106,7 @@ func (r RequestClient) DoGetReturnMapStringInterface(url string, headers map[str
 	}
 
 	addRequestHeaders(req.Request, headers)
-	dumpHttpRequest(r.Logger, req.Request)
+	dumpRequest(r.Logger, req.Request)
 
 	resp, err := r.createRetryableClient().Do(req)
 	if err != nil {
@@ -114,13 +114,13 @@ func (r RequestClient) DoGetReturnMapStringInterface(url string, headers map[str
 		panic(err)
 	}
 	defer func() {
-		checkStatusCodes(r.Logger, resp)
+		checkResponseStatusCodes(r.Logger, resp)
 		if err := resp.Body.Close(); err != nil {
 			r.Logger.Error(err.Error())
 		}
 	}()
 
-	dumpHttpResponse(r.Logger, resp)
+	dumpResponse(r.Logger, resp)
 
 	if resp.ContentLength == 0 {
 		return map[string]any{}
@@ -139,7 +139,7 @@ func (r RequestClient) DoGetReturnMapStringInterface(url string, headers map[str
 }
 
 func (r RequestClient) DoPutReturnNoContent(url string, bodyBytes []byte, headers map[string]string) {
-	dumpHttpBody(bodyBytes)
+	dumpBody(bodyBytes)
 
 	req, err := retryablehttp.NewRequest(http.MethodPut, url, bytes.NewBuffer(bodyBytes))
 	if err != nil {
@@ -148,7 +148,7 @@ func (r RequestClient) DoPutReturnNoContent(url string, bodyBytes []byte, header
 	}
 
 	addRequestHeaders(req.Request, headers)
-	dumpHttpRequest(r.Logger, req.Request)
+	dumpRequest(r.Logger, req.Request)
 
 	resp, err := r.createRetryableClient().Do(req)
 	if err != nil {
@@ -156,13 +156,13 @@ func (r RequestClient) DoPutReturnNoContent(url string, bodyBytes []byte, header
 		panic(err)
 	}
 	defer func() {
-		checkStatusCodes(r.Logger, resp)
+		checkResponseStatusCodes(r.Logger, resp)
 		if err := resp.Body.Close(); err != nil {
 			r.Logger.Error(err.Error())
 		}
 	}()
 
-	dumpHttpResponse(r.Logger, resp)
+	dumpResponse(r.Logger, resp)
 }
 
 func addRequestHeaders(req *http.Request, headers map[string]string) {
@@ -180,12 +180,12 @@ func (r RequestClient) createRetryableClient() *retryablehttp.Client {
 	return client
 }
 
-func checkStatusCodes(logger *slog.Logger, resp *http.Response) {
+func checkResponseStatusCodes(logger *slog.Logger, resp *http.Response) {
 	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 		return
 	}
 
-	dumpHttpResponse(logger, resp)
+	dumpResponse(logger, resp)
 
 	msg := fmt.Sprintf("unacceptable request status %d for URL: %s", resp.StatusCode, resp.Request.URL.String())
 	logger.Error(msg)
