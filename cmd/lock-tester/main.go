@@ -7,15 +7,20 @@ import (
 	"log/slog"
 	"maps"
 	"math/rand"
+	"os"
 	"sync"
 	"time"
 
-	"github.com/BKadirkhodjaev/lock-tester/util"
+	"github.com/BKadirkhodjaev/lock-tester/client"
 	"github.com/google/uuid"
 )
 
 const (
-	CommandName string = "Main"
+	// System properties
+	URI      string = "http://localhost:8000"
+	Tenant   string = "diku"
+	Username string = "diku_admin"
+	Password string = "admin"
 
 	// FOLIO Entity IDs
 	VendorId       string = "e0fb5df2-cdf1-11e8-a8d5-f2801f1b9fd1"
@@ -65,23 +70,53 @@ var (
 	enableDebug bool
 )
 
+type application struct {
+	logger *slog.Logger
+	client *client.RequestClient
+}
+
 func main() {
 	start := time.Now()
-	slog.Info(CommandName, util.GetFuncName(), "Started")
 
-	parseArgs()
+	flag.IntVar(&threadCount, "threads", 50, "Persistent HTTP thread count")
+	flag.BoolVar(&enableDebug, "debug", false, "Enable debug output of HTTP request and response")
+	flag.Parse()
 
-	token := getAccessToken()
-	headers := util.CreateHeadersWithToken(token)
+	logLevel := slog.LevelInfo
+	if enableDebug {
+		logLevel = slog.LevelDebug
+	}
 
-	recalculateBudgets(headers)
-	createBudgetAllocations(headers)
+	logger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level:     logLevel,
+		AddSource: true,
+	}))
+	slog.SetDefault(logger)
+
+	a := &application{
+		logger: logger,
+		client: &client.RequestClient{
+			Logger:       logger,
+			URI:          URI,
+			Tenant:       Tenant,
+			RetryMax:     30,
+			RetryWaitMax: 500 * time.Second,
+		},
+	}
+
+	a.logger.Info("Started")
+
+	token := a.getAccessToken()
+	headers := a.client.CreateHeadersWithToken(token)
+
+	a.recalculateBudgets(headers)
+	a.createBudgetAllocations(headers)
 
 	invoiceIdCh := make(chan string, threadCount)
 	var invoiceCreationWaitGroup sync.WaitGroup
 	invoiceCreationWaitGroup.Add(threadCount)
 	for range threadCount {
-		go createInvoiceAndInvoiceLines(headers, invoiceIdCh, &invoiceCreationWaitGroup)
+		go a.createInvoiceAndInvoiceLines(headers, invoiceIdCh, &invoiceCreationWaitGroup)
 	}
 
 	go func() {
@@ -97,36 +132,27 @@ func main() {
 	var invoiceApproveAndPayWaitGroup sync.WaitGroup
 	invoiceApproveAndPayWaitGroup.Add(len(invoiceIds))
 	for _, invoiceId := range invoiceIds {
-		go approveAndPayInvoice(headers, invoiceId, &invoiceApproveAndPayWaitGroup)
+		go a.approveAndPayInvoice(headers, invoiceId, &invoiceApproveAndPayWaitGroup)
 	}
 	invoiceApproveAndPayWaitGroup.Wait()
 
 	elapsed := time.Since(start) / 1000 / 1000 / 1000
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Stopped, elapsed %d seconds", elapsed))
+	a.logger.Info(fmt.Sprintf("Stopped, elapsed %d seconds", elapsed))
 }
 
-func parseArgs() {
-	flag.IntVar(&threadCount, "threads", 50, "Persistent HTTP thread count")
-	flag.BoolVar(&enableDebug, "debug", false, "Enable debug output of HTTP request and response")
-	flag.Parse()
-
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Enable debug: %t", enableDebug))
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Thread count: %d", threadCount))
-}
-
-func getAccessToken() string {
-	headers := util.CreateHeaders()
-	bytes, err := json.Marshal(map[string]any{"username": "diku_admin", "password": "admin"})
+func (a application) getAccessToken() string {
+	headers := a.client.CreateHeaders()
+	bytes, err := json.Marshal(map[string]any{"username": Username, "password": Password})
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, "authn/login"), enableDebug, bytes, headers)
+	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("authn/login"), bytes, headers)
 
 	return resp["okapiToken"].(string)
 }
 
-func createBudgetAllocations(headers map[string]string) {
+func (a application) createBudgetAllocations(headers map[string]string) {
 	budgetAllocationPayload := map[string]any{
 		"transactionsToCreate": []map[string]any{
 			{
@@ -151,34 +177,34 @@ func createBudgetAllocations(headers map[string]string) {
 	}
 	bytes, err := json.Marshal(budgetAllocationPayload)
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
 
-	util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, "finance/transactions/batch-all-or-nothing"), enableDebug, bytes, headers)
-	slog.Info(CommandName, util.GetFuncName(), "Budget allocations created")
+	a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("finance/transactions/batch-all-or-nothing"), bytes, headers)
+	a.logger.Info("Budget allocations created")
 }
 
-func recalculateBudgets(headers map[string]string) {
+func (a application) recalculateBudgets(headers map[string]string) {
 	for _, budgetId := range []string{BudgetId, BudgetId2} {
-		util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("finance/budgets/%s/recalculate", budgetId)), enableDebug, []byte{}, headers)
+		a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint(fmt.Sprintf("finance/budgets/%s/recalculate", budgetId)), []byte{}, headers)
 	}
-	slog.Info(CommandName, util.GetFuncName(), "Budgets recalculated")
+	a.logger.Info("Budgets recalculated")
 }
 
-func createInvoiceAndInvoiceLines(headers map[string]string, invoiceIdCh chan string, waitGroup *sync.WaitGroup) {
+func (a application) createInvoiceAndInvoiceLines(headers map[string]string, invoiceIdCh chan string, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	invoiceId := createInvoice(headers)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice %s", invoiceId))
+	invoiceId := a.createInvoice(headers)
+	a.logger.Info(fmt.Sprintf("Created invoice %s", invoiceId))
 
-	invoiceLineId := createInvoiceLine(headers, invoiceId)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Created invoice line %s", invoiceLineId))
+	invoiceLineId := a.createInvoiceLine(headers, invoiceId)
+	a.logger.Info(fmt.Sprintf("Created invoice line %s", invoiceLineId))
 
 	invoiceIdCh <- invoiceId
 }
 
-func createInvoice(headers map[string]string) string {
+func (a application) createInvoice(headers map[string]string) string {
 	invoicePayload := map[string]any{
 		"id":                     uuid.New().String(),
 		"chkSubscriptionOverlap": true,
@@ -211,15 +237,15 @@ func createInvoice(headers map[string]string) string {
 	}
 	bytes, err := json.Marshal(invoicePayload)
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, "invoice/invoices"), enableDebug, bytes, headers)
+	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("invoice/invoices"), bytes, headers)
 
 	return resp["id"].(string)
 }
 
-func createInvoiceLine(headers map[string]string, invoiceId string) string {
+func (a application) createInvoiceLine(headers map[string]string, invoiceId string) string {
 	invoiceLinePayload := map[string]any{
 		"id":                uuid.New().String(),
 		"invoiceId":         invoiceId,
@@ -239,60 +265,60 @@ func createInvoiceLine(headers map[string]string, invoiceId string) string {
 	}
 	bytes, err := json.Marshal(invoiceLinePayload)
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
-	resp := util.DoPostReturnMapStringInteface(CommandName, util.CreateEndpoint(CommandName, "invoice/invoice-lines"), enableDebug, bytes, headers)
+	resp := a.client.DoPostReturnMapStringInteface(a.client.CreateEndpoint("invoice/invoice-lines"), bytes, headers)
 
 	return resp["id"].(string)
 }
 
-func approveAndPayInvoice(headers map[string]string, invoiceId string, waitGroup *sync.WaitGroup) {
+func (a application) approveAndPayInvoice(headers map[string]string, invoiceId string, waitGroup *sync.WaitGroup) {
 	defer waitGroup.Done()
 
-	invoiceBeforeApproval := getInvoiceById(headers, invoiceId)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Received invoice %s before approval", invoiceId))
+	invoiceBeforeApproval := a.getInvoiceById(headers, invoiceId)
+	a.logger.Info(fmt.Sprintf("Received invoice %s before approval", invoiceId))
 
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Approving invoice %s", invoiceId))
-	approveInvoice(headers, invoiceBeforeApproval)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Approved invoice %s", invoiceId))
+	a.logger.Info(fmt.Sprintf("Approving invoice %s", invoiceId))
+	a.approveInvoice(headers, invoiceBeforeApproval)
+	a.logger.Info(fmt.Sprintf("Approved invoice %s", invoiceId))
 
-	invoiceBeforePayment := getInvoiceById(headers, invoiceId)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Received invoice %s before payment", invoiceId))
+	invoiceBeforePayment := a.getInvoiceById(headers, invoiceId)
+	a.logger.Info(fmt.Sprintf("Received invoice %s before payment", invoiceId))
 
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Paying invoice %s", invoiceId))
-	payInvoice(headers, invoiceBeforePayment)
-	slog.Info(CommandName, util.GetFuncName(), fmt.Sprintf("Paid invoice %s", invoiceId))
+	a.logger.Info(fmt.Sprintf("Paying invoice %s", invoiceId))
+	a.payInvoice(headers, invoiceBeforePayment)
+	a.logger.Info(fmt.Sprintf("Paid invoice %s", invoiceId))
 }
 
-func getInvoiceById(headers map[string]string, invoiceId string) map[string]any {
-	return util.DoGetReturnMapStringInterface(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, headers)
+func (a application) getInvoiceById(headers map[string]string, invoiceId string) map[string]any {
+	return a.client.DoGetReturnMapStringInterface(a.client.CreateEndpoint(fmt.Sprintf("invoice/invoices/%s", invoiceId)), headers)
 }
 
-func approveInvoice(headers map[string]string, invoice map[string]any) {
+func (a application) approveInvoice(headers map[string]string, invoice map[string]any) {
 	invoiceCopy := copyInvoiceWithStatus(invoice, "Approved")
 
 	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
 
 	invoiceId := invoiceCopy["id"].(string)
-	util.DoPutReturnNoContent(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, bytes, headers)
+	a.client.DoPutReturnNoContent(a.client.CreateEndpoint(fmt.Sprintf("invoice/invoices/%s", invoiceId)), bytes, headers)
 }
 
-func payInvoice(headers map[string]string, invoice map[string]any) {
+func (a application) payInvoice(headers map[string]string, invoice map[string]any) {
 	invoiceCopy := copyInvoiceWithStatus(invoice, "Paid")
 
 	bytes, err := json.Marshal(invoiceCopy)
 	if err != nil {
-		slog.Error(CommandName, util.GetFuncName(), "json.Marshal error")
+		a.logger.Error(err.Error())
 		panic(err)
 	}
 
 	invoiceId := invoiceCopy["id"].(string)
-	util.DoPutReturnNoContent(CommandName, util.CreateEndpoint(CommandName, fmt.Sprintf("invoice/invoices/%s", invoiceId)), enableDebug, bytes, headers)
+	a.client.DoPutReturnNoContent(a.client.CreateEndpoint(fmt.Sprintf("invoice/invoices/%s", invoiceId)), bytes, headers)
 }
 
 func copyInvoiceWithStatus(invoice map[string]any, status string) map[string]any {
