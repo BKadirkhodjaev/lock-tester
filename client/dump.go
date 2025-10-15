@@ -18,34 +18,36 @@ func dumpBody(bytes []byte) {
 	fmt.Println()
 }
 
-func dumpRequest(logger *slog.Logger, req *http.Request) {
+func dumpRequest(req *http.Request) error {
 	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		return
+		return nil
 	}
 
 	bytes, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		logger.Error(err.Error())
-		panic(err)
+		return err
 	}
 
 	fmt.Println("### Dumping HTTP Request ###")
 	fmt.Println(string(bytes))
 	fmt.Println()
+
+	return nil
 }
 
-func dumpResponse(logger *slog.Logger, resp *http.Response) {
-	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) {
-		return
+func dumpResponse(resp *http.Response, forceDump bool) error {
+	if !slog.Default().Enabled(context.Background(), slog.LevelDebug) && !forceDump {
+		return nil
 	}
 
 	bytes, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		logger.Error(err.Error())
-		panic(err)
+		return err
 	}
 
 	fmt.Println("### Dumping HTTP Response ###")
 	fmt.Println(string(bytes))
 	fmt.Println()
+
+	return nil
 }
